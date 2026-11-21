@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoboArm Controller</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F4F2EC;--card:#FFFFFF;--acc:#2F5D50;--acc-soft:#E3ECE7;--ok:#3F7D58;--bad:#B3472F;--txt:#26332E;--mut:#6B766F;--line:#DAD6CA}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--txt);font-family:Inter,Cairo,sans-serif;min-height:100vh;padding-bottom:120px}
+html[lang=ar] body{font-family:Cairo,Inter,sans-serif}
+header{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 24px;background:#FBFAF7;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;color:var(--acc);margin-inline-end:auto}
+button{font:inherit;color:var(--txt);cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 16px;transition:.15s}
+button:hover{border-color:var(--acc);background:var(--acc-soft)}button:active{transform:scale(.98)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.btn-acc{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.btn-acc:hover{background:#244A40;border-color:#244A40}
+.status{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;font-weight:600;font-size:.9rem;background:#F6E4DE;color:var(--bad)}
+.status.on{background:#DDEEE3;color:var(--ok)}
+.dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+.status.on .dot{animation:pulse 1.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,125,88,.6)}100%{box-shadow:0 0 0 9px transparent}}
+.round{width:38px;height:38px;border-radius:50%;padding:0;font-weight:700}
+main{max-width:980px;margin:0 auto;padding:24px 16px}
+.demo{display:flex;align-items:center;gap:8px;color:var(--mut);font-size:.9rem;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:760px){.grid{grid-template-columns:1fr 1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;box-shadow:0 1px 3px rgba(38,51,46,.06)}
+.jh{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.jh svg{width:32px;height:32px;stroke:var(--acc);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.jn{font-weight:700}.jd{color:var(--mut);font-size:.82rem}
+.angle{margin-inline-start:auto;font-variant-numeric:tabular-nums;font-weight:700;background:var(--acc-soft);color:var(--acc);padding:4px 12px;border-radius:6px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:#D9DDD3;margin:14px 0 4px;direction:ltr}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--acc);border:3px solid #fff;box-shadow:0 0 0 1px var(--acc);cursor:grab}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--acc);border:3px solid #fff;cursor:grab}
+.log{margin-top:18px}
+.log summary{cursor:pointer;color:var(--mut)}
+#logbox{margin-top:8px;height:110px;overflow:auto;background:#EEF0EA;border:1px solid var(--line);border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,Consolas,monospace;color:#2F5D50;direction:ltr;text-align:left}
+.seq{margin-top:18px}
+.seq h3{margin-bottom:10px}
+.pose{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);font-size:.9rem}
+.pose code{color:var(--mut);direction:ltr;unicode-bidi:embed}
+.pose button{margin-inline-start:auto;padding:4px 10px;color:var(--bad)}
+.empty{color:var(--mut)}
+.bar{position:fixed;inset:auto 0 0 0;z-index:20;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:#FBFAF7;border-top:1px solid var(--line)}
+.bar label{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--mut)}
+.bar input[type=number]{width:70px;background:#fff;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:7px}
+.modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(38,51,46,.45)}
+.modal.open{display:flex}
+.sheet{max-width:620px;width:100%;max-height:86vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;position:relative;box-shadow:0 12px 40px rgba(38,51,46,.2)}
+.sheet h2{margin-bottom:14px;color:var(--acc)}.sheet h3{margin:16px 0 6px;color:var(--acc)}
+.sheet li{margin:4px 0;margin-inline-start:20px;color:#3C4A44;line-height:1.7}
+.x{position:absolute;top:12px;inset-inline-end:12px;width:34px;height:34px;padding:0;border-radius:50%}
+#toasts{position:fixed;top:78px;inset-inline-end:16px;z-index:60;display:grid;gap:8px}
+.toast{background:#fff;border:1px solid var(--line);border-inline-start:4px solid var(--acc);padding:10px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(38,51,46,.15)}
+.toast.err{border-inline-start-color:var(--bad)}.toast.ok{border-inline-start-color:var(--ok)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.bar{gap:12px}
+.ab{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:130px;padding:11px 20px;border-radius:10px;font-weight:600;border:1.5px solid var(--acc);background:#fff;color:var(--acc);box-shadow:0 1px 2px rgba(38,51,46,.08)}
+.ab svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ab:hover{background:var(--acc-soft);border-color:var(--acc);box-shadow:0 3px 8px rgba(47,93,80,.18);transform:translateY(-1px)}
+.ab#resetBtn{border-color:#B9B5A8;color:#4A5650}
+.ab#resetBtn:hover{border-color:var(--bad);color:var(--bad);background:#FBF0EC}
+.ab.run{background:var(--acc);color:#fff;min-width:160px;padding:12px 26px;box-shadow:0 3px 10px rgba(47,93,80,.3)}
+.ab.run svg{fill:currentColor}
+.ab.run:hover{background:#244A40;border-color:#244A40}
+.ab.run.stop{background:var(--bad);border-color:var(--bad);box-shadow:0 3px 10px rgba(179,71,47,.3)}
+.grp{display:flex;align-items:center;gap:14px;padding:6px 14px;background:#F4F2EC;border:1px solid var(--line);border-radius:10px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2F5D50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21h8M8 21v-6l6-5M14 10l5-5M19 5l-2-2M19 5l2 2"/></svg>
+    <span data-i="title"></span>
+  </div>
+  <button id="langBtn">EN / عربي</button>
+  <span class="status" id="status"><span class="dot"></span><span id="statusTxt"></span></span>
+  <button class="btn-acc" id="connBtn"></button>
+  <button class="round" id="helpBtn" aria-label="Help">?</button>
+</header>
+
+<main>
+  <label class="demo"><input type="checkbox" id="demo"> <span data-i="demo"></span></label>
+  <div class="grid" id="grid"></div>
+
+  <details class="log" id="logWrap">
+    <summary data-i="log"></summary>
+    <div id="logbox"></div>
+  </details>
+
+  <section class="card seq">
+    <h3 data-i="saved"></h3>
+    <div id="poses"></div>
+  </section>
+</main>
+
+<div class="bar">
+  <button id="resetBtn" class="ab"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v5h5"/></svg><span data-i="reset"></span></button>
+  <button id="saveBtn" class="ab"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6"/></svg><span data-i="save"></span></button>
+  <div class="grp"><label><span data-i="delay"></span><input type="number" id="delayIn" value="800" min="100" step="100"></label><label><input type="checkbox" id="loopIn"><span data-i="loop"></span></label></div>
+  <button id="runBtn" class="ab run"><svg viewBox="0 0 24 24" aria-hidden="true"><path id="runIcon" d="M7 4l13 8-13 8z"/></svg><span id="runTxt" data-i="run"></span></button>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <button class="x" id="xBtn" aria-label="Close">✕</button>
+    <h2 data-i="helpTitle"></h2>
+    <div id="helpBody"></div>
+    <button class="btn-acc" id="backBtn" style="margin-top:18px" data-i="back"></button>
+  </div>
+</div>
+<div id="toasts"></div>
+
+<script>
+const T={
+en:{title:"RoboArm Controller",connect:"Connect Bluetooth",connected:"Connected",disconnected:"Disconnected",disconnect:"Disconnect",
+demo:"Demo / Simulation Mode",log:"Serial Monitor / Log",saved:"Saved poses",reset:"Reset",save:"Save Pose",run:"Run Sequence",stop:"Stop",
+delay:"Delay (ms)",loop:"Loop",back:"Back to Control",helpTitle:"Help & Instructions",empty:"No saved poses yet. Move the sliders, then press Save Pose.",
+step:"Step",del:"Delete",
+j:[["Base","Left / Right rotation"],["Shoulder","Up / Down lift"],["Elbow","Extend / Retract"],["Wrist Roll","Rotate gripper"],["Wrist Pitch","Tilt gripper"],["Gripper","Open / Close claw"]],
+unsupported:"Your browser does not support Web Serial. Please use Chrome or Edge on a computer.",
+tConn:"Connected to the robot arm",tDisc:"Connection lost",tFail:"Could not connect. Pair the module first and pick its outgoing COM port.",
+tSaved:"Pose saved",tNeed:"Connect Bluetooth or enable Demo Mode first",tNoPose:"Save at least one pose first",
+help:[["How to Connect",["Pair HC-05 or HC-06 in your device Bluetooth settings (PIN 1234 or 0000).","Open this page in Chrome or Edge.","Click Connect Bluetooth and choose the module's outgoing serial (COM) port.","Check that the green Connected badge appears."]],
+["Controls Guide",["Base turns the arm left and right.","Shoulder and Elbow lift and extend the arm.","Wrist Roll and Wrist Pitch rotate and tilt the gripper.","Gripper opens and closes the claw.","Reset / Home returns all joints to 90°.","Save Pose stores the current angles. Run Sequence plays saved poses in order, with the delay you set and an optional loop."]],
+["Safety & Power Tips",["Move one slider at a time and move it smoothly. Moving all 6 servos fast can drop the battery voltage.","Do not over-tighten the gripper on an object."]]]},
+ar:{title:"متحكم الذراع الروبوتية",connect:"اتصال بالبلوتوث",connected:"متصل",disconnected:"غير متصل",disconnect:"قطع الاتصال",
+demo:"وضع التجربة / المحاكاة",log:"شاشة السيريال / السجل",saved:"الوضعيات المحفوظة",reset:"إعادة الضبط",save:"حفظ وضعية",run:"تشغيل التسلسل",stop:"إيقاف",
+delay:"التأخير (م.ث)",loop:"تكرار",back:"العودة للتحكم",helpTitle:"المساعدة والتعليمات",empty:"لا توجد وضعيات محفوظة. حرّك المقابض ثم اضغط حفظ وضعية.",
+step:"الخطوة",del:"حذف",
+j:[["القاعدة","يمين / يسار"],["الكتف","أعلى / أسفل"],["الكوع","مدّ / ثني"],["دوران المعصم","لف الكماشة"],["إمالة المعصم","إمالة الكماشة"],["الكماشة","فتح / قفل الكماشة"]],
+unsupported:"متصفحك لا يدعم Web Serial. استخدم Chrome أو Edge على الكمبيوتر.",
+tConn:"تم الاتصال بالذراع الروبوتية",tDisc:"انقطع الاتصال",tFail:"تعذر الاتصال. اعمل pair للموديول أولًا واختر منفذ COM الصادر الخاص به.",
+tSaved:"تم حفظ الوضعية",tNeed:"اتصل بالبلوتوث أو فعّل وضع التجربة أولًا",tNoPose:"احفظ وضعية واحدة على الأقل",
+help:[["خطوات الاتصال",["اعمل pair لـ HC-05 أو HC-06 من إعدادات البلوتوث (الرقم السري 1234 أو 0000).","افتح هذه الصفحة في Chrome أو Edge.","اضغط اتصال بالبلوتوث واختر منفذ COM الصادر الخاص بالموديول.","تأكد من ظهور علامة متصل باللون الأخضر."]],
+["دليل التحكم",["القاعدة تدير الذراع يمينًا ويسارًا.","الكتف والكوع يرفعان الذراع ويمدّانها.","دوران المعصم وإمالة المعصم يلفّان الكماشة ويميلانها.","الكماشة تفتح وتقفل.","إعادة الضبط ترجع كل المفاصل إلى 90°.","حفظ وضعية يخزّن الزوايا الحالية، وتشغيل التسلسل يشغّل الوضعيات المحفوظة بالترتيب مع التأخير الذي تحدده وخيار التكرار."]],
+["نصائح الأمان والطاقة",["حرّك مقبضًا واحدًا في كل مرة وبهدوء. تحريك الـ 6 محركات بسرعة معًا قد يُسقط جهد البطارية.","لا تُحكم قفل الكماشة بقوة على الجسم."]]]}
+};
+const ICONS=['<circle cx="12" cy="12" r="8"/><path d="M12 4v8l5 3"/>','<path d="M5 19l6-10 4 4 4-8"/><circle cx="5" cy="19" r="1.5"/>','<path d="M4 18l8-12 8 12"/><circle cx="12" cy="6" r="1.5"/>','<path d="M20 12a8 8 0 1 1-3-6.2M20 4v5h-5"/>','<path d="M4 16l8-8 8 8M12 8v10"/>','<path d="M6 4c0 6 3 8 6 8M18 4c0 6-3 8-6 8M12 12v8"/>'];
+let lang=localStorage.getItem('lang')||'en',port=null,writer=null,reader=null,connected=false,running=false;
+const ang=[90,90,90,90,90,90];
+let poses=JSON.parse(localStorage.getItem('poses')||'[]');
+const $=id=>document.getElementById(id);
+const enc=new TextEncoder();
+
+// ---- UI build ----
+const grid=$('grid');
+for(let i=0;i<6;i++){
+  grid.insertAdjacentHTML('beforeend',`<div class="card"><div class="jh"><svg viewBox="0 0 24 24">${ICONS[i]}</svg><div><div class="jn" id="jn${i}"></div><div class="jd" id="jd${i}"></div></div><span class="angle" id="av${i}">90°</span></div><input type="range" min="0" max="180" value="90" id="sl${i}" aria-label="S${i+1}"></div>`);
+  $('sl'+i).addEventListener('input',e=>setAngle(i,+e.target.value,true));
+}
+function setAngle(i,v,send){
+  ang[i]=v;$('sl'+i).value=v;$('av'+i).textContent=v+'°';
+  if(send)queue(i,v);
+}
+
+// ---- language ----
+function applyLang(){
+  const t=T[lang];
+  document.documentElement.lang=lang;document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+  document.querySelectorAll('[data-i]').forEach(el=>{const k=el.dataset.i;if(t[k]&&!(el.id==='runTxt'&&running))el.textContent=t[k]});
+  t.j.forEach((j,i)=>{$('jn'+i).textContent=j[0];$('jd'+i).textContent=j[1]});
+  $('helpBody').innerHTML=t.help.map(s=>`<h3>${s[0]}</h3><ul>${s[1].map(x=>`<li>${x}</li>`).join('')}</ul>`).join('');
+  $('runTxt').textContent=running?t.stop:t.run;$('runBtn').classList.toggle('stop',running);
+  updateConn();renderPoses();
+  localStorage.setItem('lang',lang);
+}
+$('langBtn').onclick=()=>{lang=lang==='en'?'ar':'en';applyLang()};
+
+// ---- toast / log ----
+function toast(msg,type=''){const d=document.createElement('div');d.className='toast '+type;d.textContent=msg;$('toasts').appendChild(d);setTimeout(()=>d.remove(),3500)}
+function log(s){const b=$('logbox');b.textContent+=s.trim()+'\n';b.scrollTop=b.scrollHeight;if(b.textContent.length>4000)b.textContent=b.textContent.slice(-3000)}
+
+// ---- connection ----
+function updateConn(){
+  const t=T[lang];
+  $('status').classList.toggle('on',connected);
+  $('statusTxt').textContent=connected?t.connected:t.disconnected;
+  $('connBtn').textContent=connected?t.disconnect:t.connect;
+}
+$('connBtn').onclick=async()=>{
+  if(connected){await closePort();return}
+  if(!('serial' in navigator)){toast(T[lang].unsupported,'err');return}
+  try{
+    port=await navigator.serial.requestPort();
+    await port.open({baudRate:9600});
+    writer=port.writable.getWriter();
+    connected=true;updateConn();toast(T[lang].tConn,'ok');
+    readLoop();
+  }catch(e){
+    if(e.name!=='NotFoundError')toast(T[lang].tFail,'err');
+    console.error(e);port=null;
+  }
+};
+async function readLoop(){
+  try{
+    reader=port.readable.getReader();
+    const dec=new TextDecoder();
+    while(true){const {value,done}=await reader.read();if(done)break;if(value)log('← '+dec.decode(value))}
+  }catch(e){handleLost()}
+  finally{try{reader&&reader.releaseLock()}catch(_){}}
+}
+function handleLost(){
+  if(!connected)return;
+  connected=false;writer=null;port=null;updateConn();toast(T[lang].tDisc,'err');
+}
+async function closePort(){
+  connected=false;
+  try{reader&&await reader.cancel()}catch(_){}
+  try{writer&&(writer.releaseLock())}catch(_){}
+  try{port&&await port.close()}catch(_){}
+  writer=null;port=null;updateConn();
+}
+if('serial' in navigator)navigator.serial.addEventListener('disconnect',()=>handleLost());
+else setTimeout(()=>toast(T[lang].unsupported,'err'),600);
+
+// ---- sending (throttled ~45ms, latest value per joint) ----
+const pending={};let timer=null;
+function ready(){return connected||$('demo').checked}
+function queue(i,v){
+  if(!ready())return;
+  pending[i]=v;
+  if(!timer)timer=setTimeout(flush,45);
+}
+async function flush(){
+  timer=null;
+  const keys=Object.keys(pending);
+  for(const k of keys){const v=pending[k];delete pending[k];await sendRaw(`S${+k+1}:${v}\n`)}
+}
+async function sendRaw(s){
+  log('→ '+s);
+  if(connected&&writer){try{await writer.write(enc.encode(s))}catch(e){handleLost()}}
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+// ---- actions ----
+$('resetBtn').onclick=async()=>{
+  if(!ready()){toast(T[lang].tNeed,'err');return}
+  for(let i=0;i<6;i++){setAngle(i,90,false);await sendRaw(`S${i+1}:90\n`);await sleep(150)}
+};
+$('saveBtn').onclick=()=>{
+  poses.push([...ang]);localStorage.setItem('poses',JSON.stringify(poses));
+  renderPoses();toast(T[lang].tSaved,'ok');
+};
+function renderPoses(){
+  const t=T[lang],box=$('poses');
+  if(!poses.length){box.innerHTML=`<p class="empty">${t.empty}</p>`;return}
+  box.innerHTML=poses.map((p,i)=>`<div class="pose"><b>${t.step} ${i+1}</b><code>${p.join(' · ')}</code><button data-d="${i}">${t.del}</button></div>`).join('');
+  box.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{poses.splice(+b.dataset.d,1);localStorage.setItem('poses',JSON.stringify(poses));renderPoses()});
+}
+$('runBtn').onclick=async()=>{
+  if(running){running=false;return}
+  if(!ready()){toast(T[lang].tNeed,'err');return}
+  if(!poses.length){toast(T[lang].tNoPose,'err');return}
+  running=true;$('runTxt').textContent=T[lang].stop;$('runBtn').classList.add('stop');
+  do{
+    for(const p of poses){
+      if(!running)break;
+      for(let i=0;i<6;i++){setAngle(i,p[i],false);await sendRaw(`S${i+1}:${p[i]}\n`);await sleep(60)}
+      await sleep(Math.max(100,+$('delayIn').value||800));
+    }
+  }while(running&&$('loopIn').checked);
+  running=false;$('runTxt').textContent=T[lang].run;$('runBtn').classList.remove('stop');
+};
+
+// ---- help modal ----
+const modal=$('modal');
+$('helpBtn').onclick=()=>modal.classList.add('open');
+['xBtn','backBtn'].forEach(id=>$(id).onclick=()=>modal.classList.remove('open'));
+modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')modal.classList.remove('open')});
+
+applyLang();
+</script>
+</body>
+</html>
